@@ -3,8 +3,8 @@ Config = {}
 Config.Debug = false
 
 --SERVER SETTINGS
-Config.Framework = "ESX"                 -- Set your framework! qbcore, ESX, standalone
-Config.UseNewESX = true                  -- Do you use NEW ESX? Type true or false
+Config.Framework = "qbcore"                 -- Set your framework! qbcore, ESX, standalone
+Config.UseNewESX = false                  -- Do you use NEW ESX? Type true or false
 Config.Target = "ox_target"              -- Which Target system do u use? qb-target, qtarget, ox_target
 Config.NotificationType = "ox_lib"       -- Notifications | types: ESX, ox_lib, qbcore
 Config.Progress = "ox_lib"               -- ProgressBar | types: progressBars, ox_lib, qbcore

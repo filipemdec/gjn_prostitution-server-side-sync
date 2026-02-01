@@ -1,0 +1,16 @@
+# FiveM / general
+*.log
+*.bak
+*.tmp
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node (if any tools are used later)
+node_modules/
+
+# Build outputs (optional)
+dist/

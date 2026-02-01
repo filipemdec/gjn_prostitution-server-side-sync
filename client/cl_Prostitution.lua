@@ -1,6 +1,10 @@
 lib.locale()
 local target          = Target()
 
+-- NEW CODE
+-- net ids resolvidos por todos os clientes
+local CurrentHookerNetId, CurrentVehNetId = nil, nil
+
 local Keys            = {
     ["ESC"] = 322,
     ["F1"] = 288,
@@ -170,6 +174,31 @@ AddEventHandler("gjn_prostitution:ChooseVennesa", function()
     OnRouteToHooker = true
 end)
 
+-- NEW CODE
+-- BJ
+RegisterNetEvent("gjn_prostitution:ChooseBlowjob")
+AddEventHandler("gjn_prostitution:ChooseBlowjob", function()
+    -- garantir que tens os IDs
+    if not CurrentHookerNetId or not CurrentVehNetId then return end
+    TriggerServerEvent("gjn_prostitution:startService", {
+        service  = "bj",
+        pedNetId = CurrentHookerNetId,
+        vehNetId = CurrentVehNetId
+    })
+end)
+
+-- SEX
+RegisterNetEvent("gjn_prostitution:ChooseSex")
+AddEventHandler("gjn_prostitution:ChooseSex", function()
+    if not CurrentHookerNetId or not CurrentVehNetId then return end
+    TriggerServerEvent("gjn_prostitution:startService", {
+        service  = "sex",
+        pedNetId = CurrentHookerNetId,
+        vehNetId = CurrentVehNetId
+    })
+end)
+
+--[[
 RegisterNetEvent("gjn_prostitution:ChooseBlowjob")
 AddEventHandler("gjn_prostitution:ChooseBlowjob", function(data)
     HookerInCar = false
@@ -181,6 +210,7 @@ AddEventHandler("gjn_prostitution:ChooseSex", function(data)
     HookerInCar = false
     TriggerServerEvent("gjn_prostitution:pay", false)
 end)
+]]
 
 RegisterNetEvent("gjn_prostitution:noMoney")
 AddEventHandler("gjn_prostitution:noMoney", function()
@@ -252,6 +282,12 @@ function CreateHooker(model)
     SetBlockingOfNonTemporaryEvents(Hooker, true)
     TaskStartScenarioInPlace(Hooker, "WORLD_HUMAN_SMOKING", 0, false)
 
+    -- depois de CreatePed(...)
+    CurrentHookerNetId = NetworkGetNetworkIdFromEntity(Hooker)
+    SetNetworkIdCanMigrate(CurrentHookerNetId, true)
+    -- opcional:
+    SetNetworkIdExistsOnAllMachines(CurrentHookerNetId, true)
+
     HookerBlip = AddBlipForCoord(Config.BlowSexJobs[spawn].x, Config.BlowSexJobs[spawn].y,
         Config.BlowSexJobs[spawn].z)
     SetBlipSprite(HookerBlip, 280)
@@ -302,6 +338,10 @@ AddEventHandler("gjn_prostitution:ChosenHooker", function(model)
                     if GetPedInVehicleSeat(vehicle, -1) and IsPedInVehicle(ped, vehicle, true) and not IsVehicleSeatFree(vehicle, 0) and not IsVehicleSeatFree(vehicle, -1) then
                         letSleep = false
                         local ped = GetPlayerPed(PlayerId())
+                        -- NEW CODE
+                        -- quando confirmas que a NPC já está dentro do veículo "veh"
+                        CurrentVehNetId = VehToNet(veh)
+
                         if IsVehicleStopped(vehicle) then
                             inZone = true
 
@@ -335,6 +375,38 @@ AddEventHandler("gjn_prostitution:ChosenHooker", function(model)
             end
         end)
     end
+end)
+
+-- NEW CODE
+RegisterNetEvent("gjn_prostitution:doService")
+AddEventHandler("gjn_prostitution:doService", function(data)
+    local worker = NetworkGetEntityFromNetworkId(data.pedNetId or 0)
+    local veh    = NetworkGetEntityFromNetworkId(data.vehNetId or 0)
+    if worker ~= 0 and veh ~= 0 then
+        SetPedIntoVehicle(worker, veh, 0) -- garante mesmo assento
+    end
+
+    -- NPC: animação para TODOS
+    if worker ~= 0 and data.anim_npc and data.anim_npc.dict and data.anim_npc.name then
+        RequestAnimDict(data.anim_npc.dict)
+        while not HasAnimDictLoaded(data.anim_npc.dict) do Wait(0) end
+        TaskPlayAnim(worker, data.anim_npc.dict, data.anim_npc.name, 4.0, -4.0, data.duration or -1, 1, 0, false, false, false)
+    end
+
+    -- PLAYER: animação só no cliente que pediu
+    if PlayerId() == GetPlayerFromServerId(data.src) then
+        if data.anim_player and data.anim_player.dict and data.anim_player.name then
+            RequestAnimDict(data.anim_player.dict)
+            while not HasAnimDictLoaded(data.anim_player.dict) do Wait(0) end
+            TaskPlayAnim(PlayerPedId(), data.anim_player.dict, data.anim_player.name, 4.0, -4.0, data.duration or -1, 1, 0, false, false, false)
+        end
+    end
+
+    -- esperar fim + limpeza simples
+    local ms = data.duration or 20000
+    Wait(ms)
+    ClearPedTasks(PlayerPedId())
+    if worker ~= 0 then ClearPedTasks(worker) end
 end)
 
 function hookerGoHome()
